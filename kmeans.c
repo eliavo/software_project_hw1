@@ -1,16 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int get_d(FILE*);
 double** parse_input(FILE*);
 void free_data(double**);
+double** set_initial_means(double**, int);
+int update_means(double**, double**);
 
 int d;
+const double e = 0.001;
 
 int main(int argc, char* argv[]){
     int K, max_iter;
     FILE *input, *output;
-    double** data;
+    double **data, *means, change;
 
     if (argc<4) {
         perror("Invalid input!\n");
@@ -30,12 +34,18 @@ int main(int argc, char* argv[]){
     }
 
     d = get_d(input);
-    
     data = parse_input(input);
+    means = set_initial_means(data, K);
+
+    do {
+        change = update_means(data, means);
+        max_iter--;
+    } while (change>e && max_iter>0);
 
     printf("%d %d %d %p\n",K, max_iter, d, (void*)data);
 
     free_data(data);
+    free_data(means);
     fclose(input);
     fclose(output);
     return 0;
@@ -78,12 +88,24 @@ double** parse_input(FILE *input) {
 }
 
 void free_data(double** data) {
-    double *entry;
     int i;
     
-    i = 0;
-    for (entry=data[i++]; entry!=NULL; entry=data[i++])
-        free(entry);
+    for (i=0; data[i]!=NULL; i++)
+        free(data[i]);
     
     free(data);
+}
+
+double** set_initial_means(double **data, int K) {
+    double **means;
+    int i;
+
+    means = (double**)malloc(sizeof(double*)*(K+1));
+    for (i=0; i<K; i++) {
+        means[i] = (double*)malloc(sizeof(double)*d);
+        memcpy(means[i], data[i], sizeof(double)*d);
+    }
+
+    means[K] = NULL;
+    return means;
 }
