@@ -6,7 +6,9 @@ int get_d(FILE*);
 double** parse_input(FILE*);
 void free_data(double**);
 double** set_initial_means(double**, int);
-int update_means(double**, double**);
+void copy_means(double**, double**);
+void update_means(double**, double**);
+int calc_change(double**, double**);
 
 int d;
 const double e = 0.001;
@@ -14,7 +16,8 @@ const double e = 0.001;
 int main(int argc, char* argv[]){
     int K, max_iter;
     FILE *input, *output;
-    double **data, *means, change;
+    double **data, **means, **copy, change;
+    int i;
 
     if (argc<4) {
         perror("Invalid input!\n");
@@ -36,9 +39,13 @@ int main(int argc, char* argv[]){
     d = get_d(input);
     data = parse_input(input);
     means = set_initial_means(data, K);
+    copy = (double**)malloc(sizeof(double*)*K);
+    for (i=0; i<K; copy[i++] = (double*)malloc(sizeof(double)*d));
 
     do {
-        change = update_means(data, means);
+        copy_means(means, copy);
+        update_means(data, means);
+        change = calc_change(means, copy);
         max_iter--;
     } while (change>e && max_iter>0);
 
@@ -108,4 +115,10 @@ double** set_initial_means(double **data, int K) {
 
     means[K] = NULL;
     return means;
+}
+
+void copy_means(double** means, double** copy) {
+    int i;
+    for (int i=0; means[i] != NULL; i++)
+        memcpy(copy, means, sizeof(double)*d);
 }
