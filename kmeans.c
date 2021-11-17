@@ -10,6 +10,8 @@ void copy_means(double**, double**);
 void update_means(double**, double**, double**, int*);
 double calc_dist(double*, double*);
 double calc_change(double**, double**);
+void write_res(FILE*, double**);
+void print_status(double**, double**);
 
 int d;
 const double e = 0.001;
@@ -19,7 +21,6 @@ int main(int argc, char* argv[]){
     FILE *input, *output;
     double **data, **means, **copy;
     int *counters;
-    int i, j;
 
     if (argc<4) {
         perror("Invalid input!\n");
@@ -44,18 +45,16 @@ int main(int argc, char* argv[]){
     copy = set_initial_means(data, K);
     counters = (int*)malloc(sizeof(int)*K);
 
-    while (calc_change(means, copy)>e && max_iter>0){
-        update_means(data, means, copy, counters);
-        max_iter--;
+    do {
         copy_means(means, copy);
-    } 
+        update_means(data, means, copy, counters);
+        print_status(means, copy);
+        max_iter--;
 
-    for (i=0; means[i] != NULL; i++) {
-        for (j=0; j<d-1; j++) {
-            fprintf(output, "%.4f,", means[i][j]);
-        }
-        fprintf(output, "%.4f\n", means[i][d-1]);
-    }
+    } while (calc_change(means, copy)>e*e && max_iter>0);
+
+    copy_means(means, copy);
+    write_res(output, means);
 
     free_data(data);
     free_data(means);
@@ -113,12 +112,13 @@ void free_data(double** data) {
 
 double** set_initial_means(double **data, int K) {
     double **means;
-    int i;
+    int i, j;
 
     means = (double**)malloc(sizeof(double*)*(K+1));
     for (i=0; i<K; i++) {
         means[i] = (double*)malloc(sizeof(double)*d);
-        memcpy(means[i], data[i], sizeof(double)*d);
+        for (j=0; j<d; j++)
+            means[i][j] = data[i][j];
     }
 
     means[K] = NULL;
@@ -126,9 +126,10 @@ double** set_initial_means(double **data, int K) {
 }
 
 void copy_means(double** means, double** copy) {
-    int i;
+    int i, j;
     for (i=0; copy[i] != NULL; i++)
-        memcpy(means[i], copy[i], sizeof(double)*d);
+        for (j=0; j<d; j++)
+            means[i][j] = copy[i][j];
 }
 
 void update_means(double** data, double** means, double** copy, int* counters) {
@@ -153,15 +154,15 @@ void update_means(double** data, double** means, double** copy, int* counters) {
             }
         }
 
-        for (j=0; j<d; j++) {
+        for (j=0; j<d; j++)
             copy[min_dist_element][j] += data[i][j];
-            counters[min_dist_element]++;
-        }
+
+        counters[min_dist_element]++;
     }
 
     for (i=0; copy[i] != NULL; i++)
         for (j=0; j<d; j++)
-            copy[i][j] = copy[i][j]/counters[i];
+            copy[i][j] = copy[i][j]/((double)counters[i]);
 }
 
 double calc_dist(double* v, double* s) {
@@ -181,12 +182,42 @@ double calc_change(double** prev, double** curr) {
     double change, dist;
     int i;
     
-    change = 0;
     for (i=0; prev[i] != NULL; i++) {
         dist = calc_dist(prev[i], curr[i]);
 
         if (change<dist) change = dist;
     }
 
+    printf("change: %.4f\n", change);
     return change;
+}
+
+void write_res(FILE* output, double** means) {
+    int i, j;
+
+    for (i=0; means[i] != NULL; i++);
+    
+    for (i--; i>=0; i--) {
+        for (j=0; j<d-1; j++) {
+            fprintf(output, "%.4f,", means[i][j]);
+        }
+        fprintf(output, "%.4f\n", means[i][d-1]);
+    }
+}
+
+void print_status(double** means, double** copy) {
+    static int i=0;
+    int j, k;
+
+    printf("%d iteration:\n", i++);
+
+    for (j=0; means[j] != NULL; j++) {
+        for (k=0; k<d-1; k++)
+            printf("%.4f,", means[j][k]);
+        printf("%.4f", means[j][d-1]);
+        printf("  ");
+        for (k=0; k<d-1; k++)
+            printf("%.4f,", copy[j][k]);
+        printf("%.4f\n", copy[j][d-1]);
+    }
 }
