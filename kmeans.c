@@ -33,6 +33,7 @@ int main(int argc, char* argv[]){
     }
     else {
         max_iter = atoi(argv[2]);
+        
         input = fopen(argv[3], "r");
         output = fopen(argv[4], "w");
     }
@@ -44,13 +45,12 @@ int main(int argc, char* argv[]){
     counters = (int*)malloc(sizeof(int)*K);
 
     do {
-        copy_means(means, copy);
+        copy_means(copy, means);
         update_means(data, means, copy, counters);
         max_iter--;
 
-    } while (calc_change(means, copy)>e*e && max_iter>0);
+    } while (calc_change(copy, means)>e*e && max_iter>0);
 
-    copy_means(means, copy);
     write_res(output, means);
 
     free_data(data);
@@ -89,7 +89,7 @@ double** parse_input(FILE *input) {
     for(i=0; i<lines; i++) {
         data[i] = (double*)malloc(sizeof(double)*d);
         for (j=0; j<d; j++) {
-            offset = fscanf(input, "%[^,^\n]", buffer);
+            offset = fscanf(input, "%128[^,^\n]", buffer);
             fseek(input, offset, SEEK_CUR);
             data[i][j] = atof(buffer);
         }
@@ -123,29 +123,29 @@ double** set_initial_means(double **data, int K) {
     return means;
 }
 
-void copy_means(double** means, double** copy) {
+void copy_means(double** target, double** input) {
     int i, j;
-    for (i=0; copy[i] != NULL; i++)
+    for (i=0; input[i] != NULL; i++)
         for (j=0; j<d; j++)
-            means[i][j] = copy[i][j];
+            target[i][j] = input[i][j];
 }
 
 void update_means(double** data, double** means, double** copy, int* counters) {
     int i, j, min_dist_element;
     double min_dist, dist;
     
-    for (i=0; copy[i] != NULL; i++) {
+    for (i=0; means[i] != NULL; i++) {
         for (j=0; j<d; j++)
-            copy[i][j] = 0;
+            means[i][j] = 0;
         counters[i] = 0;
     } /* sets copy, counters to 0. copy will be added to and devided with counters
     to get the mean of each cluster */
 
     for (i=0; data[i] != NULL; i++) {
         min_dist_element = 0;
-        min_dist = calc_dist(data[i], means[0]);
-        for (j=1; means[j] != NULL; j++) {
-            dist = calc_dist(data[i], means[j]);
+        min_dist = calc_dist(data[i], copy[0]);
+        for (j=1; copy[j] != NULL; j++) {
+            dist = calc_dist(data[i], copy[j]);
             if (dist<min_dist) {
                 min_dist = dist;
                 min_dist_element = j;
@@ -153,14 +153,14 @@ void update_means(double** data, double** means, double** copy, int* counters) {
         }
 
         for (j=0; j<d; j++)
-            copy[min_dist_element][j] += data[i][j];
+            means[min_dist_element][j] += data[i][j];
 
         counters[min_dist_element]++;
     }
 
-    for (i=0; copy[i] != NULL; i++)
+    for (i=0; means[i] != NULL; i++)
         for (j=0; j<d; j++)
-            copy[i][j] = copy[i][j]/counters[i];
+            means[i][j] = means[i][j]/counters[i];
 }
 
 double calc_dist(double* v, double* s) {
