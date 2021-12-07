@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int check_valid_k(double**, int);
 int get_d(FILE*);
 double** parse_input(FILE*);
 void free_data(double**);
@@ -26,6 +27,10 @@ int main(int argc, char* argv[]){
     }
 
     K = atoi(argv[1]);
+    if (K<=1) {
+        perror("Invalid input!\n");
+        return 1;
+    }
     if (argc == 4) {
         max_iter = 200;
         input = fopen(argv[2], "r");
@@ -33,13 +38,24 @@ int main(int argc, char* argv[]){
     }
     else {
         max_iter = atoi(argv[2]);
-        
+        if (max_iter<=0) {
+            perror("Invalid input!\n");
+            return 1;
+        }
+
         input = fopen(argv[3], "r");
         output = fopen(argv[4], "w");
     }
 
     d = get_d(input);
     data = parse_input(input);
+    if (!check_valid_k(data, K)) {
+        perror("Invalid input!\n");
+        free_data(data);
+        fclose(input);
+        fclose(output);
+        return 1;
+    }
     means = set_initial_means(data, K);
     copy = set_initial_means(data, K);
     counters = (int*)malloc(sizeof(int)*K);
@@ -74,6 +90,13 @@ int get_d(FILE *input) {
 
     rewind(input);
     return d;
+}
+
+int check_valid_k(double** data, int K) {
+    int i;
+    for (i=0; data[i] != NULL; i++);
+    if (K>=i) return 0;
+    return 1;
 }
 
 double** parse_input(FILE *input) {
